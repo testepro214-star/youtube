@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TikTok LIVE Rewards</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            outline: none !important;
+        }
+
+        input, button, select, textarea {
+            outline: none !important;
+            box-shadow: none !important;
+            border: none;
+        }
+
+        body {
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 414px;
+            height: 100vh;
+            max-height: 896px;
+            background-color: #f8f8f8;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Screen Transitions */
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #f8f8f8;
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            overflow-y: auto;
+            overflow-x: hidden;
+            z-index: 1;
+            padding-bottom: 24px;
+        }
+
+        #screen-main { transform: translateX(0); background: #f8f8f8; }
+        #screen-transfer { transform: translateX(100%); background: #f8f8f8; }
+        #screen-success { transform: translateX(100%); background: #f8f8f8; }
+
+        .screen.active { transform: translateX(0) !important; z-index: 5; }
+        .screen.slide-left { transform: translateX(-30%); }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            position: sticky;
+            top: 0;
+            background: #f8f8f8;
+            z-index: 10;
+        }
+
+        .header-title { font-size: 17px; font-weight: 700; color: #161823; }
+        .header-icon { font-size: 20px; color: #161823; cursor: pointer; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+        .header-manage { color: #fe2c55; font-weight: 700; font-size: 15px; cursor: pointer; }
+
+        .content-padding { padding: 0 16px; }
+
+        /* Main Screen Elements */
+        .identity-box { 
+            background-color: #fff; 
+            border-radius: 12px; 
+            padding: 16px; 
+            margin-top: 8px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 4px; 
+        }
+        .identity-title { font-size: 15px; font-weight: 700; color: #161823; display: flex; align-items: center; gap: 6px; }
+        .identity-desc { font-size: 13px; color: #8a8b91; line-height: 1.4; }
+
+        .rewards-summary { 
+            background: #fff;
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 12px;
+            display: flex; 
+            justify-content: space-between; 
+        }
+        .summary-block { display: flex; flex-direction: column; gap: 6px; }
+        .summary-label { font-size: 12px; color: #8a8b91; }
+        .summary-value { font-size: 15px; font-weight: 700; color: #161823; }
+        .summary-value.upcoming { color: #fe2c55; display: flex; align-items: center; gap: 6px; }
+        .red-dot { width: 7px; height: 7px; background-color: #fe2c55; border-radius: 50%; display: inline-block; }
+
+        .main-balance-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 24px 16px 16px 16px;
+            margin-top: 12px;
+            text-align: center;
+        }
+
+        .main-balance-label { font-size: 13px; color: #8a8b91; margin-bottom: 8px; }
+        .main-balance-value { display: flex; align-items: baseline; justify-content: center; gap: 4px; margin-bottom: 20px; }
+        .currency { font-size: 16px; font-weight: 700; color: #8a8b91; }
+        .amount-big { font-size: 38px; font-weight: 800; color: #161823; letter-spacing: -0.5px; }
+        .amount-decimals { font-size: 18px; font-weight: 700; color: #161823; }
+
+        .action-buttons { display: flex; flex-direction: column; gap: 10px; }
+        .btn { width: 100%; padding: 14px; border-radius: 25px; font-size: 16px; font-weight: 700; text-align: center; cursor: pointer; border: none; transition: opacity 0.2s; }
+        .btn:active { opacity: 0.8; }
+        .btn-primary { background-color: #fe2c55; color: #fff; }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-secondary { background-color: #fff; color: #161823; border: 1.5px solid #161823; }
+
+        .limit-info { display: flex; justify-content: space-between; align-items: center; margin-top: 18px; font-size: 12px; }
+        .limit-label { color: #8a8b91; }
+        .limit-value { font-weight: 700; color: #161823; }
+        .increase-limit { color: #fe2c55; font-size: 12px; font-weight: 600; margin-top: 6px; cursor: pointer; text-align: left; }
+
+        /* Transactions Section */
+        .transactions-section { 
+            background: #fff; 
+            border-radius: 12px; 
+            padding: 16px; 
+            margin-top: 12px; 
+        }
+        .transactions-header { font-size: 17px; font-weight: 800; color: #161823; margin-bottom: 16px; }
+        .month-selector { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+        .month-title { font-size: 14px; font-weight: 700; color: #161823; display: flex; flex-direction: column; gap: 2px; }
+        .month-summary { font-size: 12px; color: #8a8b91; text-align: right; display: flex; gap: 16px; }
+
+        .transaction-list { display: flex; flex-direction: column; gap: 18px; }
+        .transaction-item { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #f8f8f8; padding-bottom: 14px; }
+        .transaction-item:last-child { border-bottom: none; padding-bottom: 0; }
+        .tx-left { display: flex; flex-direction: column; gap: 4px; }
+        .tx-title { font-size: 14px; color: #161823; font-weight: 600; }
+        .tx-date { font-size: 11px; color: #8a8b91; }
+        .tx-right { font-size: 14px; font-weight: 700; color: #161823; }
+
+        /* Transfer Screen Elements */
+        .transfer-content { padding: 0 16px; }
+        
+        .method-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .method-left { display: flex; align-items: center; gap: 12px; }
+        .tiktok-badge {
+            width: 32px;
+            height: 32px;
+            background: #000;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+        }
+        .method-title { font-size: 14px; font-weight: 700; color: #161823; }
+        .method-subtitle { font-size: 12px; color: #8a8b91; }
+
+        .user-card { background: #fff; border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; }
+        .user-input-box { display: flex; align-items: center; gap: 10px; }
+        .user-input-box input { border: none; background: transparent; font-size: 15px; width: 100%; color: #161823; font-weight: 500; }
+        .user-input-box input::placeholder { color: #8a8b91; }
+
+        /* Profile Preview Card */
+        .profile-preview {
+            background: #fff;
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .profile-avatar {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #e1e1e1;
+        }
+        .profile-info { display: flex; flex-direction: column; flex: 1; }
+        .profile-name { font-size: 15px; font-weight: 700; color: #161823; display: flex; align-items: center; gap: 4px; }
+        .profile-handle { font-size: 12px; color: #8a8b91; margin-top: 1px; }
+        .profile-followers { font-size: 12px; color: #8a8b91; margin-top: 2px; }
+
+        .limit-row { display: flex; justify-content: space-between; align-items: center; padding: 0 4px; margin-bottom: 12px; font-size: 12px; }
+        .limit-row .lbl { color: #8a8b91; }
+        .limit-row .val { color: #161823; font-weight: 700; }
+
+        .transfer-card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 12px; position: relative; }
+        .t-card-title { color: #8a8b91; font-size: 12px; display: flex; align-items: center; gap: 4px; margin-bottom: 10px; }
+        .t-card-input-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .t-left-group { display: flex; align-items: center; gap: 8px; flex: 1; }
+        .t-currency { font-size: 18px; font-weight: 800; color: #161823; }
+        
+        .t-input { 
+            font-size: 32px; 
+            font-weight: 800; 
+            color: #161823; 
+            border: none; 
+            outline: none; 
+            background: transparent; 
+            width: 100%; 
+            padding: 0; 
+        }
+        
+        .t-all { color: #fe2c55; font-size: 14px; font-weight: 700; cursor: pointer; flex-shrink: 0; }
+        .t-estimated-val { font-size: 24px; font-weight: 800; color: #161823; }
+
+        .service-fee-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 6px; margin-top: 8px; margin-bottom: 20px; font-size: 13px; }
+        .service-fee-lbl { color: #8a8b91; display: flex; align-items: center; gap: 4px; }
+        .service-fee-val { color: #161823; font-weight: 700; font-size: 14px; }
+
+        .info-icon { width: 14px; height: 14px; border: 1px solid #8a8b91; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; color: #8a8b91; font-weight: 600; font-style: normal; }
+
+        .terms-text { font-size: 12px; color: #8a8b91; text-align: center; line-height: 1.5; padding: 0 10px; margin-bottom: 24px; }
+        .terms-text a { color: #161823; text-decoration: underline; font-weight: 600; }
+
+        /* Modal Bottom Sheet */
+        .modal-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; display: none; opacity: 0; transition: opacity 0.3s ease; }
+        .modal-content { position: absolute; bottom: -100%; left: 0; width: 100%; background: #fff; border-radius: 16px 16px 0 0; padding: 24px 20px; transition: bottom 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
+        .modal-overlay.active { display: block; opacity: 1; }
+        .modal-overlay.active .modal-content { bottom: 0; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; font-size: 17px; font-weight: 700; color: #161823; }
+        .modal-close { cursor: pointer; color: #161823; font-size: 18px; font-weight: 600; }
+        .modal-row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 18px; }
+        .modal-row-label { color: #8a8b91; display: flex; align-items: center; gap: 4px; }
+        .modal-row-val { color: #161823; font-weight: 700; text-align: right; }
+
+        /* Loading Spinner Dot Style */
+        .loading-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255, 255, 255, 0.85); z-index: 100; display: none; }
+        .loading-active .loading-overlay { display: block; }
+
+        .spinner-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 101;
+            display: none;
+        }
+        .loading-active .spinner-container { display: block; }
+
+        .dot-spinner {
+            width: 48px;
+            height: 48px;
+            position: relative;
+            animation: spin 1s linear infinite;
+        }
+        .dot-spinner div {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #00e07b;
+            border-radius: 50%;
+        }
+        .dot-spinner div:nth-child(1) { top: 0; left: 19px; opacity: 1; }
+        .dot-spinner div:nth-child(2) { top: 5px; right: 5px; opacity: 0.875; }
+        .dot-spinner div:nth-child(3) { top: 19px; right: 0; opacity: 0.75; }
+        .dot-spinner div:nth-child(4) { bottom: 5px; right: 5px; opacity: 0.625; }
+        .dot-spinner div:nth-child(5) { bottom: 0; left: 19px; opacity: 0.5; }
+        .dot-spinner div:nth-child(6) { bottom: 5px; left: 5px; opacity: 0.375; }
+        .dot-spinner div:nth-child(7) { top: 19px; left: 0; opacity: 0.25; }
+        .dot-spinner div:nth-child(8) { top: 5px; left: 5px; opacity: 0.125; }
+
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* Success Screen */
+        .success-header { text-align: center; padding: 28px 20px 20px 20px; }
+        .success-title { font-size: 14px; color: #8a8b91; margin-bottom: 8px; }
+        .success-amount { font-size: 32px; font-weight: 800; color: #161823; }
+        .success-amount span { font-size: 16px; font-weight: 700; margin-right: 4px; color: #161823; }
+        
+        .success-card { background: #fff; margin: 0 16px; border-radius: 12px; padding: 20px; }
+        .status-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #f1f1f2; padding-bottom: 16px; }
+        .status-label { font-size: 14px; color: #8a8b91; }
+        .status-value { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; color: #00e07b; }
+        
+        .details-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 16px; }
+        .details-label { color: #8a8b91; display: flex; align-items: center; gap: 4px; }
+        .details-val { color: #161823; font-weight: 700; text-align: right; }
+
+        .help-link { text-align: center; color: #8a8b91; font-size: 13px; margin-top: 16px; font-weight: 500; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div class="app-container" id="app">
+        <!-- SCREEN 1: MAIN WALLET -->
+        <div id="screen-main" class="screen">
+            <div class="content-padding">
+                <div class="identity-box">
+                    <div class="identity-title">
+                        Identity verified 
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="#20D5EC"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                    </div>
+                    <div class="identity-desc">Your identity is verified. You can continue with transactions.</div>
+                </div>
+
+                <div class="rewards-summary">
+                    <div class="summary-block">
+                        <div class="summary-label">Available rewards</div>
+                        <div class="summary-value">USD9,631,068.00</div>
+                    </div>
+                    <div class="summary-block">
+                        <div class="summary-label">Upcoming rewards</div>
+                        <div class="summary-value upcoming"><span class="red-dot"></span> USD2,000,000.00</div>
+                    </div>
+                </div>
+
+                <div class="main-balance-card">
+                    <div class="main-balance-label">Available rewards</div>
+                    <div class="main-balance-value">
+                        <span class="currency">USD</span>
+                        <span class="amount-big">9,631,068</span>
+                        <span class="amount-decimals">.00</span>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" onclick="openTransfer()">Transfer</button>
+                        <button class="btn btn-secondary">Exchange</button>
+                    </div>
+
+                    <div class="limit-info">
+                        <div class="limit-label">Daily transfer limit (Remain/Total)</div>
+                        <div class="limit-value">$9.6M/$10.0M</div>
+                    </div>
+                    <div class="increase-limit">How to increase transfer limit? ></div>
+                </div>
+
+                <div class="transactions-section">
+                    <div class="transactions-header">Transactions</div>
+                    <div class="month-selector">
+                        <div class="month-title">
+                            Mar
+                            <span>2026 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg></span>
+                        </div>
+                        <div class="month-summary">
+                            <div>In:<br><strong>USD9,691,068.00</strong></div>
+                            <div>Out:<br><strong>USD60,000.00</strong></div>
+                        </div>
+                    </div>
+
+                    <div class="transaction-list">
+                        <div class="transaction-item">
+                            <div class="tx-left">
+                                <div class="tx-title">Transfer to @dubaiking181</div>
+                                <div class="tx-date">03/19/2026, 01:01:10 AM</div>
+                            </div>
+                            <div class="tx-right">-USD50,000.00</div>
+                        </div>
+                        <div class="transaction-item">
+                            <div class="tx-left">
+                                <div class="tx-title">Transfer to @mrbeast</div>
+                                <div class="tx-date">03/19/2026, 01:00:01 AM</div>
+                            </div>
+                            <div class="tx-right">-USD5,000.00</div>
+                        </div>
+                        <div class="transaction-item">
+                            <div class="tx-left">
+                                <div class="tx-title">Transfer to @mrbeast</div>
+                                <div class="tx-date">03/19/2026, 12:59:36 AM</div>
+                            </div>
+                            <div class="tx-right">-USD5,000.00</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN 2: TRANSFER VIEW -->
+        <div id="screen-transfer" class="screen">
+            <div class="loading-overlay"></div>
+            
+            <div class="spinner-container">
+                <div class="dot-spinner">
+                    <div></div><div></div><div></div><div></div>
+                    <div></div><div></div><div></div><div></div>
+                </div>
+            </div>
+
+            <div class="header">
+                <div class="header-title">Payment method</div>
+                <div class="header-manage">Manage</div>
+            </div>
+
+            <div class="transfer-content">
+                <div class="method-card">
+                    <div class="method-left">
+                        <div class="tiktok-badge">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 1 1-2.88-2.89 2.87 2.87 0 0 1 1.05.21V9.45a6.34 6.34 0 0 0-1.05-.09 6.34 6.34 0 1 0 6.34 6.34V9a8.16 8.16 0 0 0 4.76 1.52v-3.8a4.85 4.85 0 0 1-1-.03z"/></svg>
+                        </div>
+                        <div>
+                            <div class="method-title">Transfer name</div>
+                            <div class="method-subtitle">(Username Details)</div>
+                        </div>
+                    </div>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8a8b91" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </div>
+
+                <div class="user-card">
+                    <div class="user-input-box">
+                        <input type="text" id="usernameInput" value="dubaiking181" placeholder="@Enter TikTok username" autocomplete="off">
+                    </div>
+                </div>
+
+                <!-- PROFILE PREVIEW (EXACT FROM SCREENSHOT 3) -->
+                <div class="profile-preview" id="profilePreview">
+                    <img src="https://unavatar.io/tiktok/dubaiking181" alt="Avatar" class="profile-avatar" id="profileAvatar" onerror="this.src='https://p16-va-default.akamaized.net/obj/tiktok-obj/1664821217082370.jpeg'">
+                    <div class="profile-info">
+                        <div class="profile-name" id="profileDisplayName">Dubai King 👑</div>
+                        <div class="profile-handle" id="profileHandle">@dubaiking181</div>
+                        <div class="profile-followers" id="profileFollowers">478.4K followers</div>
+                    </div>
+                </div>
+
+                <div class="limit-row">
+                    <div class="lbl">Daily transfer limit (Remain/Total)</div>
+                    <div class="val">9.6 / 10.0M</div>
+                </div>
+
+                <div class="transfer-card">
+                    <div class="t-card-title">Transfer amount</div>
+                    <div class="t-card-input-row">
+                        <div class="t-left-group">
+                            <span class="t-currency">USD</span>
+                            <input type="number" id="transferAmount" class="t-input" value="5000" placeholder="0">
+                        </div>
+                        <span class="t-all">All</span>
+                    </div>
+                </div>
+
+                <div class="transfer-card">
+                    <div class="t-card-title">
+                        Estimated amount you receive <i class="info-icon">?</i>
+                    </div>
+                    <div class="t-estimated-val" id="receiveAmount">USD 4,970.00</div>
+                </div>
+
+                <div class="service-fee-row">
+                    <div class="service-fee-lbl">
+                        Service fee <i class="info-icon">?</i>
+                    </div>
+                    <div class="service-fee-val">USD 30.00</div>
+                </div>
+
+                <div class="terms-text">
+                    TikTok <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>. Payment transactions are processed by PIPO. <a href="#">PIPO Privacy Policy</a>
+                </div>
+
+                <button class="btn btn-primary" id="btnOpenModal">Transfer</button>
+            </div>
+        </div>
+
+        <!-- SCREEN 3: SUCCESS VIEW -->
+        <div id="screen-success" class="screen">
+            <div class="success-header">
+                <div class="success-title">LIVE rewards transfer to TikTok</div>
+                <div class="success-amount"><span>USD</span><span id="finalDisplayAmount">5,000.00</span></div>
+            </div>
+
+            <div class="success-card">
+                <div class="status-row">
+                    <div class="status-label">Status</div>
+                    <div class="status-value">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                        Withdrawal complete
+                    </div>
+                </div>
+
+                <div class="details-row">
+                    <div class="details-label">Payment method</div>
+                    <div class="details-val" id="finalUser">TikTok(@dubaiking181)</div>
+                </div>
+                <div class="details-row">
+                    <div class="details-label">Service fee <i class="info-icon">i</i></div>
+                    <div class="details-val">30.00 USD</div>
+                </div>
+                <div class="details-row">
+                    <div class="details-label">Estimated amount you receive <i class="info-icon">i</i></div>
+                    <div class="details-val" id="finalReceive">4,970.00 USD</div>
+                </div>
+                <div class="details-row">
+                    <div class="details-label">Transfer time</div>
+                    <div class="details-val" id="transferTime">03/19/2026, 01:01:56 AM</div>
+                </div>
+                <div class="details-row">
+                    <div class="details-label">Arrival time</div>
+                    <div class="details-val">30 Minutes in arrival</div>
+                </div>
+                <div class="details-row">
+                    <div class="details-label">Transaction ID</div>
+                    <div class="details-val">1773864116203</div>
+                </div>
+            </div>
+
+            <div style="padding: 20px 16px;">
+                <button class="btn btn-primary" onclick="resetToMain()">Back to Rewards</button>
+                <div class="help-link">Need help? ></div>
+            </div>
+        </div>
+
+        <!-- BOTTOM MODAL -->
+        <div class="modal-overlay" id="transferModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div>Transfer details</div>
+                    <div class="modal-close" onclick="closeModal()">✕</div>
+                </div>
+
+                <div class="modal-row">
+                    <div class="modal-row-label">Transfer to</div>
+                    <div class="modal-row-val" id="modalTo">TikTok (@dubaiking181)</div>
+                </div>
+                <div class="modal-row">
+                    <div class="modal-row-label">Transfer amount</div>
+                    <div class="modal-row-val" id="modalAmount">5,000.00 USD</div>
+                </div>
+                <div class="modal-row">
+                    <div class="modal-row-label">Service fee <i class="info-icon">?</i></div>
+                    <div class="modal-row-val">30.00 USD</div>
+                </div>
+                <div class="modal-row">
+                    <div class="modal-row-label">Estimated amount you receive <i class="info-icon">?</i></div>
+                    <div class="modal-row-val" id="modalReceive">4,970.00 USD</div>
+                </div>
+
+                <button class="btn btn-primary" style="margin-top: 10px;" onclick="confirmTransfer()">Confirm</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const app = document.getElementById('app');
+        const mainScreen = document.getElementById('screen-main');
+        const transferScreen = document.getElementById('screen-transfer');
+        const successScreen = document.getElementById('screen-success');
+        const transferModal = document.getElementById('transferModal');
+        
+        const transferInput = document.getElementById('transferAmount');
+        const usernameInput = document.getElementById('usernameInput');
+        const receiveAmount = document.getElementById('receiveAmount');
+        const btnOpenModal = document.getElementById('btnOpenModal');
+
+        const profilePreview = document.getElementById('profilePreview');
+        const profileAvatar = document.getElementById('profileAvatar');
+        const profileDisplayName = document.getElementById('profileDisplayName');
+        const profileHandle = document.getElementById('profileHandle');
+        const profileFollowers = document.getElementById('profileFollowers');
+
+        function formatNumber(num) {
+            return num.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+        }
+
+        function openTransfer() {
+            mainScreen.classList.add('slide-left');
+            transferScreen.classList.add('active');
+            updateEstimates();
+        }
+
+        function resetToMain() {
+            successScreen.classList.remove('active');
+            mainScreen.classList.remove('slide-left');
+            app.classList.remove('loading-active');
+        }
+
+        usernameInput.addEventListener('input', function(e) {
+            let rawUser = e.target.value.trim().replace('@', '');
+            if (!rawUser) {
+                profilePreview.style.display = 'none';
+                return;
+            }
+            profilePreview.style.display = 'flex';
+            profileHandle.textContent = `@${rawUser}`;
+            
+            if (rawUser.toLowerCase() === 'dubaiking181') {
+                profileDisplayName.textContent = 'Dubai King 👑';
+                profileFollowers.textContent = '478.4K followers';
+                profileAvatar.src = 'https://unavatar.io/tiktok/dubaiking181';
+            } else {
+                profileDisplayName.textContent = rawUser;
+                profileFollowers.textContent = '12.5K followers';
+                profileAvatar.src = `https://unavatar.io/tiktok/${rawUser}`;
+            }
+        });
+
+        function updateEstimates() {
+            let val = parseFloat(transferInput.value);
+            if (isNaN(val) || val <= 0) {
+                receiveAmount.textContent = "USD 0.00";
+                btnOpenModal.disabled = true;
+            } else {
+                let estimated = val > 30 ? val - 30 : 0;
+                receiveAmount.textContent = "USD " + formatNumber(estimated);
+                btnOpenModal.disabled = false;
+            }
+        }
+
+        transferInput.addEventListener('input', updateEstimates);
+
+        btnOpenModal.addEventListener('click', function() {
+            let val = parseFloat(transferInput.value) || 0;
+            let estimated = val > 30 ? val - 30 : 0;
+            let user = usernameInput.value.trim().replace('@', '') || "dubaiking181";
+            
+            document.getElementById('modalTo').textContent = `TikTok (@${user})`;
+            document.getElementById('modalAmount').textContent = `${formatNumber(val)} USD`;
+            document.getElementById('modalReceive').textContent = `${formatNumber(estimated)} USD`;
+            
+            transferModal.classList.add('active');
+        });
+
+        function closeModal() {
+            transferModal.classList.remove('active');
+        }
+
+        function confirmTransfer() {
+            closeModal();
+            app.classList.add('loading-active');
+
+            setTimeout(() => {
+                let val = parseFloat(transferInput.value) || 0;
+                let estimated = val > 30 ? val - 30 : 0;
+                let user = usernameInput.value.trim().replace('@', '') || "dubaiking181";
+                
+                document.getElementById('finalDisplayAmount').textContent = formatNumber(val);
+                document.getElementById('finalUser').textContent = `TikTok(@${user})`;
+                document.getElementById('finalReceive').textContent = `${formatNumber(estimated)} USD`;
+                
+                transferScreen.classList.remove('active');
+                successScreen.classList.add('active');
+                app.classList.remove('loading-active');
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
