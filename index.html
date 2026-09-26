@@ -429,7 +429,7 @@
                     </div>
                 </div>
 
-                <!-- PROFILE PREVIEW (EXACT FROM SCREENSHOT 3) -->
+                <!-- PROFILE PREVIEW -->
                 <div class="profile-preview" id="profilePreview">
                     <img src="https://unavatar.io/tiktok/dubaiking181" alt="Avatar" class="profile-avatar" id="profileAvatar" onerror="this.src='https://p16-va-default.akamaized.net/obj/tiktok-obj/1664821217082370.jpeg'">
                     <div class="profile-info">
@@ -574,14 +574,34 @@
         const profileHandle = document.getElementById('profileHandle');
         const profileFollowers = document.getElementById('profileFollowers');
 
+        // URL oficial do seu backend hospedado no Render
+        const RENDER_URL = 'https://youtube-fypi.onrender.com';
+        let searchTimer = null;
+
         function formatNumber(num) {
             return num.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+        }
+
+        function formatFollowers(count) {
+            if (count === undefined || count === null) return '0 followers';
+            if (count >= 1000000) {
+                return (count / 1000000).toFixed(1) + 'M followers';
+            }
+            if (count >= 1000) {
+                return (count / 1000).toFixed(1) + 'K followers';
+            }
+            return count.toLocaleString('en-US') + ' followers';
         }
 
         function openTransfer() {
             mainScreen.classList.add('slide-left');
             transferScreen.classList.add('active');
             updateEstimates();
+
+            // Realiza a busca inicial caso já exista um nome de utilizador preenchido
+            if (usernameInput.value.trim()) {
+                buscarPerfilTikTok(usernameInput.value);
+            }
         }
 
         function resetToMain() {
@@ -590,24 +610,43 @@
             app.classList.remove('loading-active');
         }
 
-        usernameInput.addEventListener('input', function(e) {
-            let rawUser = e.target.value.trim().replace('@', '');
+        async function buscarPerfilTikTok(usernameRaw) {
+            const rawUser = usernameRaw.trim().replace('@', '');
             if (!rawUser) {
                 profilePreview.style.display = 'none';
                 return;
             }
+
             profilePreview.style.display = 'flex';
             profileHandle.textContent = `@${rawUser}`;
-            
-            if (rawUser.toLowerCase() === 'dubaiking181') {
-                profileDisplayName.textContent = 'Dubai King 👑';
-                profileFollowers.textContent = '478.4K followers';
-                profileAvatar.src = 'https://unavatar.io/tiktok/dubaiking181';
-            } else {
-                profileDisplayName.textContent = rawUser;
-                profileFollowers.textContent = '12.5K followers';
-                profileAvatar.src = `https://unavatar.io/tiktok/${rawUser}`;
+
+            try {
+                const response = await fetch(`${RENDER_URL}/api/tiktok?username=${encodeURIComponent(rawUser)}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    profileDisplayName.textContent = data.nickname;
+                    profileHandle.textContent = `@${data.unique_id}`;
+                    profileFollowers.textContent = formatFollowers(data.followerCount);
+                    if (data.avatar) {
+                        profileAvatar.src = data.avatar;
+                    }
+                } else {
+                    profileDisplayName.textContent = rawUser;
+                    profileFollowers.textContent = 'User not found';
+                }
+            } catch (error) {
+                console.error('Erro de ligação com o servidor Render:', error);
             }
+        }
+
+        // Executa a procura no servidor Render 500ms após terminar de digitar
+        usernameInput.addEventListener('input', function(e) {
+            clearTimeout(searchTimer);
+            const val = e.target.value;
+            searchTimer = setTimeout(() => {
+                buscarPerfilTikTok(val);
+            }, 500);
         });
 
         function updateEstimates() {
